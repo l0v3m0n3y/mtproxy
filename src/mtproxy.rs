@@ -42,10 +42,10 @@ impl Mtproxy{
     pub async fn show_mtproxy_list(&self) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
         let configs = self.mtproxy_get().await;
         for config in configs?.as_array().unwrap() {
-            let country=config["country"].to_string();
-            let host=config["host"].to_string();
+            let country=config["country"].as_str().expect("REASON").to_string();
+            let host=config["host"].as_str().expect("REASON").to_string();
             let port=config["port"].to_string();
-            let secret=config["secret"].to_string();
+            let secret=config["secret"].as_str().expect("REASON").to_string();
             println!("{country} >> tg://proxy?server={host}&port={port}&secret={secret}");
         }
     Ok(().into())
