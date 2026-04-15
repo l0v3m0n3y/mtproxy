@@ -1,0 +1,17 @@
+[package]
+name = "mtproxy"
+edition = "2024"
+authors = ["L0v3m0n3y"]
+description = "Rust collection api for generate mtproxy"
+readme = "readme.md"
+homepage = "https://github.com/l0v3m0n3y/mtproxy"
+repository = "https://github.com/l0v3m0n3y/mtproxy"
+keywords = ["show_mtproxy_list"]
+categories = ["network-programming"]
+
+[dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.34", features = ["rt-multi-thread", "macros"] }
+url = "2.4"
