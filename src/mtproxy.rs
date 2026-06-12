@@ -1,58 +1,80 @@
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, CONNECTION, ACCEPT_LANGUAGE, USER_AGENT};
-use std::sync::Arc;
-use std::sync::Mutex;
-use serde_json::{Value};
+use rand::prelude::*;
 use std::fs::File;
-use std::io::{BufWriter, Write};
-use reqwest; 
-#[derive(Debug, Clone)]
+use std::io::Write;
+use std::error::Error;
 
-pub struct Mtproxy {
-    git_config: String,
-    headers: Arc<Mutex<HeaderMap>>,
+
+const SECRETS: &[&str] = &[
+    "5659e666ad01e07fed3995306dbe785c",
+    "6cbe952cf6ce201aad31a365f88f6834",
+    "02567895943d8069be957f7058fa8aed",
+    "fd3eeaff98d833deecc026f6d641ac97",
+    "70117414ed47078c62f1dd5046c938db",
+    "39682ffd39beefcc991d12c832866bca",
+    "cef63673e0225e4352204f25e87fbb7d",
+    "3f1bf2a2699b3f2d90da461534c3c54a",
+    "fdc925749cb4089b239782fb95106f88",
+    "7b5e8f646522d883fd50d2a1b1855f2d",
+    "f6fe059664c24962c99fbcc32553249e",
+    "bf2e13d1f062eaa260df32dd5768b3e7",
+    "c1626f14f79474d7d27ae1461d2d1c70",
+    "28ed0c814a97362df6fed7339922e795",
+    "b968de5d8c88024af77ee0ed494abb74",
+    "a8e84b0bdd918ad1aa18e8380b24690a",
+];
+
+const DOMAIN: &str = "proxytg.ink";
+const PORT: u16 = 443;
+const PREFIXES: &[&str] = &["proxy-telegram-", "proxy-", "proxytg-"];
+
+fn token_hex() -> String {
+    let mut bytes = [0u8; 8];
+    let mut rng = thread_rng();
+    rng.fill_bytes(&mut bytes);
+    hex::encode(bytes)
 }
 
-impl Mtproxy{
-    pub fn new() -> Self {
-        let mut headers = HeaderMap::new();
-        headers.insert(ACCEPT, HeaderValue::from_static("*/*"));
-        headers.insert(CONNECTION, HeaderValue::from_static("keep-alive"));
-        headers.insert(ACCEPT_LANGUAGE, HeaderValue::from_static("en-US,en;q=0.9"));
-        headers.insert(USER_AGENT, HeaderValue::from_static("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36"));
+fn pick<T>(arr: &[T]) -> &T {
+    let mut rng = thread_rng();
+    &arr[rng.gen_range(0..arr.len())]
+}
 
-        Self {
-            git_config: "https://raw.githubusercontent.com/nellimonix/mtproxy_list".to_string(),
-            headers: Arc::new(Mutex::new(headers)),
-        }
-    }
+fn hex_encode(s: &str) -> String {
+    hex::encode(s.as_bytes())
+}
 
-    pub async fn mtproxy_get(&self) -> Result<Value, Box<dyn std::error::Error>>{
-        let url = format!("{}/refs/heads/main/mtproxy.json", self.git_config);
-        let  current_headers = self.headers.lock().unwrap().clone();
-        let client = reqwest::Client::new();
+fn generate_proxy_link() -> String {
+    let raw = pick(SECRETS);
+    let domain_hex = hex_encode(DOMAIN);
+    let secret = format!("ee{}{}", raw, domain_hex);
     
-        let response = client
-            .get(url)
-            .headers(current_headers.clone())
-            .send()
-            .await?;
-        
-        let res = response.json().await?;
-        Ok(res)
+    let sub_prefix = pick(PREFIXES);
+    let subdomain = format!("{}{}", sub_prefix, token_hex());
+    
+    format!(
+        "tg://proxy?server={}.{}&port={}&secret={}",
+        subdomain, DOMAIN, PORT, secret
+    )
+}
+
+fn write_links_to_file(filename: &str, links: &[String]) -> Result<(), Box<dyn Error>> {
+    let mut file = File::create(filename)?;
+    for link in links {
+        writeln!(file, "{}", link)?;
     }
-        
-    pub async fn show_mtproxy_list(&self) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
-        let file = File::create("mtproxys.txt").expect("Failed create file");
-        let mut writer = BufWriter::new(file);
-        let configs = self.mtproxy_get().await;
-        for config in configs?.as_array() {
-            let country=config["country"].as_str().expect("REASON").to_string();
-            let host=config["host"].as_str().expect("REASON").to_string();
-            let port=config["port"].to_string();
-            let secret=config["secret"].as_str().expect("REASON").to_string();
-            println!("{country} >> tg://proxy?server={host}&port={port}&secret={secret}");
-            let _ = writeln!(writer,"tg://proxy?server={host}&port={port}&secret={secret}");
-        }
-    Ok(().into())
+    Ok(())
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let mut links = Vec::new();
+    for _ in 1..=10 {
+        links.push(generate_proxy_link());
     }
+    
+    write_links_to_file("proxy_links.txt", &links)?;
+
+    let personal_link = generate_proxy_link();
+    write_links_to_file("personal_proxy.txt", &[personal_link])?;
+    
+    Ok(())
 }
