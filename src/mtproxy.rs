@@ -2,6 +2,8 @@ use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, CONNECTION, ACCEPT_LANGUAG
 use std::sync::Arc;
 use std::sync::Mutex;
 use serde_json::{Value};
+use std::fs::File;
+use std::io::{BufWriter, Write};
 use reqwest; 
 #[derive(Debug, Clone)]
 
