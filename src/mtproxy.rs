@@ -40,6 +40,8 @@ impl Mtproxy{
     }
         
     pub async fn show_mtproxy_list(&self) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+        let file = File::create("mtproxys.txt").expect("Failed create file");
+        let mut writer = BufWriter::new(file);
         let configs = self.mtproxy_get().await;
         for config in configs?.as_array().unwrap() {
             let country=config["country"].as_str().expect("REASON").to_string();
@@ -47,6 +49,7 @@ impl Mtproxy{
             let port=config["port"].to_string();
             let secret=config["secret"].as_str().expect("REASON").to_string();
             println!("{country} >> tg://proxy?server={host}&port={port}&secret={secret}");
+            let _ = writeln!(writer,"tg://proxy?server={host}&port={port}&secret={secret}");
         }
     Ok(().into())
     }
