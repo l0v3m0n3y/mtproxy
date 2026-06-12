@@ -45,7 +45,7 @@ impl Mtproxy{
         let file = File::create("mtproxys.txt").expect("Failed create file");
         let mut writer = BufWriter::new(file);
         let configs = self.mtproxy_get().await;
-        for config in configs?.as_array().unwrap() {
+        for config in configs?.as_array() {
             let country=config["country"].as_str().expect("REASON").to_string();
             let host=config["host"].as_str().expect("REASON").to_string();
             let port=config["port"].to_string();
